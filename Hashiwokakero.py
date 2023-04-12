@@ -140,7 +140,21 @@ while not finish:
 
 
     elif option == 2:
-        print("Remove bridge")
+        x = int(input("x Island 1: "))
+        y = int(input("y Island 1: "))
+        if islands[y * 2][x * 2].isdigit():
+            x1 = int(input("x Island 2: "))
+            y1 = int(input("y Island 2: "))
+            if islands[y1 * 2][x1 * 2].isdigit():
+                bri = hc.Bridge(hc.Coordinate(x, y), hc.Coordinate(x1, y1))
+                found = False
+                for br in bridges:
+                    if checkCoordinates(bri, br):
+                        found = True
+                        br.remove_bridge()
+                        drawBridges(br, islands)
+                        printMap(islands)
+                        break
     elif option == 3:
         finish = True
     else:
