@@ -65,10 +65,10 @@ def drawBridges(bridge, islands):
         else :
             drawing = "≈"
         if bridge.island1.x < bridge.island2.x:
-            for i in range(bridge.island1.x + 1, bridge.island2.x * 2):
+            for i in range(bridge.island1.x*2 + 1, bridge.island2.x * 2):
                 islands[bridge.island1.y*2][i] = drawing
         else:
-            for i in range(bridge.island2.x + 1, bridge.island1.x * 2):
+            for i in range(bridge.island2.x*2 + 1, bridge.island1.x * 2):
                 islands[bridge.island1.y*2][i] = drawing
     
 
@@ -87,13 +87,27 @@ def checkCoordinates(bridge1, bridge2):
 
 def checkValidBridge(bridge, islands):
     val = True
-    if (bridge.island1.x == bridge.island2.x) or (bridge.island1.y == bridge.island2.y):
-        for i in range (bridge.island1.x, bridge.island2.x, 2):
-            if islands[bridge.island1.y][i] != "≈":
-                val = False
-                break
+    if (bridge.island1.x == bridge.island2.x): #or (bridge.island1.y == bridge.island2.y):
+        if bridge.island1.y < bridge.island2.y:
+            for i in range((bridge.island1.y*2)+1, bridge.island2.y*2):
+                if islands[i][bridge.island1.x*2] != "≈":
+                    val = False
+        else:
+            for i in range((bridge.island2.y*2)+1, bridge.island1.y*2):
+                if islands[i][bridge.island1.x*2] != "≈":
+                    val = False
 
-
+    elif (bridge.island1.y == bridge.island2.y):
+        if bridge.island1.x < bridge.island2.x:
+            for i in range(bridge.island1.x*2 + 1, bridge.island2.x * 2):
+                if islands[bridge.island1.y*2][i] != "≈":
+                    val = False
+        else:
+            for i in range(bridge.island2.x*2 + 1, bridge.island1.x * 2):
+                if islands[bridge.island1.y*2][i] != "≈":
+                    val = False
+    if not val:
+        print("Invalid bridge")
     return val
 
 
@@ -130,11 +144,12 @@ while not finish:
                         drawBridges(br, islands)
                         printMap(islands)
                         break
-                if not found:
+                if not found and checkValidBridge(bri, islands):
                     bridges.append(bri)
 
                     drawBridges(bri, islands)
                     printMap(islands)
+
         else:
             print("Bridge")
 
