@@ -1,4 +1,6 @@
 import hashiwokakero_classes as hc
+import heapq
+import copy
 
 def printMap(islands):
     marker = "   "
@@ -38,7 +40,51 @@ def loadIslands(filename, il):
         for i in range(height):
             for j in range(width*2):
                 islands[i*2+1][j] = "≈"
+    addOptionsToIslands(il, islands)
     return islands
+
+def addOptionsToIslands(il, islands):
+    for i in range(len(il)):
+        #Checks islands to the right
+        found = False
+        for j in range(il[i].x+1, len(islands[0])//2, 1):
+            if islands[il[i].y*2][j*2] != "≈":
+                #finds the island in the list
+                for k in range(len(il)):
+                    if il[k].x == j and il[k].y == il[i].y and not found:
+                        il[i].options.append(il[k])
+                        found = True
+                        break
+        #Checks islands to the left
+        found = False
+        for j in range(il[i].x-1, -1, -1):
+            if islands[il[i].y*2][j*2] != "≈":
+                #finds the island in the list
+                for k in range(len(il)):
+                    if il[k].x == j and il[k].y == il[i].y and not found:
+                        il[i].options.append(il[k])
+                        found = True
+                        break
+        #Checks islands above
+        found = False
+        for j in range(il[i].y-1, -1, -1):
+            if islands[j*2][il[i].x*2] != "≈":
+                #finds the island in the list
+                for k in range(len(il)):
+                    if il[k].x == il[i].x and il[k].y == j and not found:
+                        il[i].options.append(il[k])
+                        found = True
+                        break
+        #Checks islands below
+        found = False
+        for j in range(il[i].y+1, len(islands)//2, 1):
+            if islands[j*2][il[i].x*2] != "≈":
+                #finds the island in the list
+                for k in range(len(il)):
+                    if il[k].x == il[i].x and il[k].y == j and not found:
+                        il[i].options.append(il[k])
+                        found = True
+                        break
 
 
 def drawBridges(bridge, islands):
@@ -62,7 +108,7 @@ def drawBridges(bridge, islands):
             drawing = "-"
         elif bridge.num_bridges == 2:
             drawing = "="
-        else :
+        else:
             drawing = "≈"
         if bridge.island1.x < bridge.island2.x:
             for i in range(bridge.island1.x*2 + 1, bridge.island2.x * 2):
@@ -106,9 +152,183 @@ def checkValidBridge(bridge, islands):
             for i in range(bridge.island2.x*2 + 1, bridge.island1.x * 2):
                 if islands[bridge.island1.y*2][i] != "≈":
                     val = False
-    if not val:
-        print("Invalid bridge")
+    # if not val:
+    #     print("Invalid bridge")
     return val
+
+
+
+def is_solved(il):
+
+    for i in range(len(il)):
+        if il[i].num_bridges > 8:
+            print("Invalid map")
+            return False
+
+    solved = True
+    for i in range(len(il)):
+        if il[i].sum != il[i].num_bridges:
+            solved = False
+    return solved
+
+
+def solveSingleNeighborIslands(il, islands,bridges):
+    for i in il:
+        if len(i.options) == 1:
+            newBridge = hc.Bridge(hc.Coordinate(i.x, i.y), hc.Coordinate(i.options[0].x, i.options[0].y))
+            if checkValidBridge(newBridge, islands):
+                i.addOne()
+                i.options[0].addOne()
+                bridges.append(newBridge)
+                drawBridges(newBridge, islands)
+
+            if i.num_bridges == 2:
+                for br in bridges:
+                    if checkCoordinates(newBridge, br) and br.num_bridges < 2 and i.sum <= i.num_bridges and i.options[0].sum <= i.options[0].num_bridges:
+                        found = True
+                        br.add_bridge()
+                        drawBridges(br, islands)
+                        i.addOne()
+                        i.options[0].addOne()
+    printMap(islands)
+
+def auto_solver(il, bridges, islands, first=False):
+    # if first:
+    #     solveSingleNeighborIslands(il, islands, bridges)
+
+    if is_solved(il):
+        printMap(islands)
+        print("Solved")
+        return True
+
+    pq = []
+    for i in range(len(il)):
+        if il[i].sum != il[i].num_bridges:
+            pq.append(il[i])
+    pq.sort(key=lambda x: x.num_bridges - x.sum, reverse=True)
+
+    for i in range(len(pq)):
+
+        if(pq[i].sum < pq[i].num_bridges):
+
+            for j in range(len(pq[i].options)):
+
+                if(pq[i].options[j].sum < pq[i].options[j].num_bridges):
+
+                    newBridge = hc.Bridge(hc.Coordinate(pq[i].x, pq[i].y), hc.Coordinate(pq[i].options[j].x, pq[i].options[j].y))
+
+                    found = False
+                    for br in bridges:
+                        if checkCoordinates(newBridge, br) and br.num_bridges < 2 and pq[i].sum <= pq[i].num_bridges and pq[i].options[j].sum <= pq[i].options[j].num_bridges:
+                            found = True
+                            br.add_bridge()
+                            drawBridges(br, islands)
+                            pq[i].addOne()
+                            pq[i].options[j].addOne()
+                            #print bridge to add
+                            #print(newBridge.island1.x, newBridge.island1.y, newBridge.island2.x, newBridge.island2.y)
+                            if auto_solver(il, bridges, islands):
+                                return True
+                            #printMap(islands)
+                            break
+
+                    if not found and checkValidBridge(newBridge, islands) and pq[i].sum <= pq[i].num_bridges and pq[i].options[j].sum <= pq[i].options[j].num_bridges:
+                        bridges.append(newBridge)
+                        drawBridges(newBridge, islands)
+                        pq[i].addOne()
+                        pq[i].options[j].addOne()
+                        if auto_solver(il, bridges, islands):
+                            return True
+                        #print(newBridge.island1.x, newBridge.island1.y, newBridge.island2.x, newBridge.island2.y)
+                        break
+
+
+                    #Si no encuentra solucion, se regresa al estado anterior
+                    found = False
+                    for br in bridges:
+                        if checkCoordinates(newBridge, br):
+                            pq[i].subtractOne()
+                            pq[i].options[j].subtractOne()
+                            found = True
+                            br.remove_bridge()
+                            drawBridges(br, islands)
+                            #print("Backtracking")
+                            #bridges.remove(br)
+                            #printMap(islands)
+                            #break
+
+    #print("No solution")
+    return False
+
+
+def test(il, bridges, islands, visited_options=None,first=False):
+    if visited_options is None:
+        visited_options = set()
+
+    if is_solved(il):
+        printMap(islands)
+        print("Solved")
+        return True
+
+    pq = []
+    for i in range(len(il)):
+        if il[i].sum < il[i].num_bridges:
+            pq.append(il[i])
+    pq.sort(key=lambda x: x.num_bridges - x.sum, reverse=True)
+
+    for i in range(len(pq)):
+        if pq[i].sum < pq[i].num_bridges:
+            for j in range(len(pq[i].options)):
+                if pq[i].options[j].sum < pq[i].options[j].num_bridges:
+                    newBridge = hc.Bridge(
+                        hc.Coordinate(pq[i].x, pq[i].y),
+                        hc.Coordinate(pq[i].options[j].x, pq[i].options[j].y)
+                    )
+
+                    found = False
+                    for br in bridges:
+                        if checkCoordinates(newBridge, br) and br.num_bridges < 2 and pq[i].sum <= pq[i].num_bridges and \
+                                pq[i].options[j].sum <= pq[i].options[j].num_bridges:
+                            found = True
+                            br.add_bridge()
+                            drawBridges(br, islands)
+                            pq[i].addOne()
+                            pq[i].options[j].addOne()
+                            print(newBridge.island1.x, newBridge.island1.y, newBridge.island2.x, newBridge.island2.y)
+                            #visited_options.add(newBridge)
+                            if test(il, bridges, islands, visited_options):
+                                return True
+                            br.remove_bridge()
+                            drawBridges(br, islands)
+                            pq[i].subtractOne()
+                            pq[i].options[j].subtractOne()
+                            #visited_options.remove(newBridge)
+                            printMap(islands)
+
+                    if not found and checkValidBridge(newBridge, islands) and pq[i].sum <= pq[i].num_bridges and \
+                            pq[i].options[j].sum <= pq[i].options[j].num_bridges:
+                        bridges.append(newBridge)
+                        drawBridges(newBridge, islands)
+                        pq[i].addOne()
+                        pq[i].options[j].addOne()
+                        print(newBridge.island1.x, newBridge.island1.y, newBridge.island2.x, newBridge.island2.y)
+                        #visited_options.add(newBridge)
+                        if test(il, bridges, islands, visited_options):
+                            return True
+                        bridges.remove(newBridge)
+                        drawBridges(newBridge, islands)
+                        pq[i].subtractOne()
+                        pq[i].options[j].subtractOne()
+                        #visited_options.remove(newBridge)
+                        printMap(islands)
+
+    print("No solution")
+    return False
+
+    #TODO Iterar recursivamente cada isla en una cola hasta que no tenga mas jugadas posibles
+    #TODO Si no se puede resolver, volver atras y probar otra jugada
+    #TODO Si se llega a una solucion, imprimir y salir
+
 
 
 #main
@@ -120,6 +340,7 @@ printMap(islands)
 
 finish = False
 
+auto_solver(il, bridges, islands)
 while not finish:
     print("1. Add bridge")
     print("2. Remove bridge")
@@ -137,7 +358,7 @@ while not finish:
                 bri = hc.Bridge(hc.Coordinate(x, y), hc.Coordinate(x1, y1))
                 found = False
                 for br in bridges:
-                    #TODO revisar valido en br encontrado con valor 0
+
                     if checkCoordinates(bri, br):
                         found = True
                         br.add_bridge()
@@ -147,6 +368,10 @@ while not finish:
                 if not found and checkValidBridge(bri, islands):
                     bridges.append(bri)
 
+                    #Changes sum in islands\
+                    for i in range(len(il)):
+                        if (il[i].x == bri.island1.x and il[i].y == bri.island1.y) or (il[i].x == bri.island2.x and il[i].y == bri.island2.y):
+                            il[i].addOne()
                     drawBridges(bri, islands)
                     printMap(islands)
 
@@ -165,6 +390,10 @@ while not finish:
                 found = False
                 for br in bridges:
                     if checkCoordinates(bri, br):
+                        for i in range(len(il)):
+                            if (il[i].x == bri.island1.x and il[i].y == bri.island1.y) or (
+                                    il[i].x == bri.island2.x and il[i].y == bri.island2.y):
+                                il[i].substractOne()
                         found = True
                         br.remove_bridge()
                         drawBridges(br, islands)
@@ -174,4 +403,6 @@ while not finish:
         finish = True
     else:
         print("Invalid option")
-        
+
+
+#TODO Modificar estructura para poder crear grafo, problema de la reina arbol de decision con backtracking

@@ -30,6 +30,27 @@ class Island:
         self.x = x
         self.y = y
         self.num_bridges = num_bridges
+        self.sum = 0
+        self.options = []
+        self.heuristic = 0
     
     def __str__(self):
         return f"Island ({self.x}, {self.y}) with {self.num_bridges} bridges"
+
+    def addOne(self):
+        self.sum += 1
+
+    def subtractOne(self):
+        self.sum -= 1
+
+    def __le__(self, other):
+        return (len(self.options) <= len(other.options))
+
+    def __lt__(self, other):
+        return (len(self.options) < len(other.options))
+
+    def returnSum(self):
+        return self.sum
+
+    def returnOptionsLength(self):
+        return len(self.options)
